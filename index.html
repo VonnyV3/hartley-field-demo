@@ -249,17 +249,50 @@ function jobList(){
       ' &middot; form '+esc(v.opened_at)+'&ndash;'+esc(v.saved_at)+'</div>').join('') : '');
 }
 
+/* Winter flatwork goes in partial and the crew returns weeks later (the scheduler
+   tracks Y/N/P). All flatwork visits on a job share its job key and carry a
+   visit sequence; only a NON-partial save marks the flatwork complete. Both
+   entries are always kept -- never merged, never overwritten. */
+function flatState(jobKey){
+  const visits = [];
+  days.forEach(d => d.visits.forEach(v => {
+    if(v.job === jobKey && v.kind === CREWS.flat.label) visits.push(v);
+  }));
+  return {
+    seq: visits.length + 1,
+    complete: visits.some(v => !v.fields.partial),
+    lastPartial: visits.filter(v => v.fields.partial).slice(-1)[0] || null
+  };
+}
+
+function sfOf(fields){
+  return Math.round(FLAT_EL.reduce((a,[k]) => a + num(fields["el_"+k]), 0)*10)/10;
+}
+
 function open_(k){
   if(!day || day.end){ startDayScreen(); return; }
   // opened_at is a free auto-stamp -- with saved_at it is the office's basis
   // for ALLOCATING day hours across lots. No hours are asked for here.
   entry = {job:k, kind:CREWS[me.c].label, by:me.n, date:today(),
     opened_at: nowTime()};
+  let banner = '';
+  if(me.c === "flat"){
+    const st = flatState(k);
+    if(st.lastPartial && !st.complete){
+      const p = st.lastPartial;
+      banner =
+        '<div class="calc"><div class="big">Visit '+st.seq+'</div>' +
+        '<div class="lab">Partial pour on '+esc(p.date)+' &mdash; ' +
+        esc(p.fields.yards || "?")+' CY, '+sfOf(p.fields)+' SF poured so far. ' +
+        'This save records a return visit on the same job. Leave ' +
+        '&ldquo;Partial pour&rdquo; unchecked only if this pour finishes the lot.</div></div>';
+    }
+  }
   $("bottom").style.display = "block";
   const forms = {haul:fHaul, back:fBack, found:fFound, flat:fFlat};
   $("app").innerHTML =
     '<button class="back" onclick="jobList()">&larr; Different lot</button>' +
-    '<h2>'+esc(k)+'</h2>' +
+    '<h2>'+esc(k)+'</h2>' + banner +
     '<label>Date</label><input type="date" id="date" value="'+today()+'">' +
     forms[me.c]() +
     '<label>Notes</label><textarea id="notes" placeholder="Anything the office needs to know"></textarea>';
@@ -354,6 +387,12 @@ function save(){
     if(!el.id || el.id === "date") return;
     v.fields[el.id] = (el.type === "checkbox") ? el.checked : el.value;
   });
+  if(me.c === "flat"){
+    // visit sequence links return pours to the same job; only a non-partial
+    // save marks the flatwork complete. Entries are appended, never merged.
+    v.seq = flatState(v.job).seq;
+    v.flatwork_complete = !v.fields.partial;
+  }
   day.visits.push(v);
   persist();
   jobList();
