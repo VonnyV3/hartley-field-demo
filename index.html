@@ -124,12 +124,22 @@ const FLAT_EL = [["garage","Garage"],["drive","Driveway"],["patio","Patio"],
 const FND_IT = ["Columns","Straps","Vents","Anchor bolts","Bolts","Sonotubes",
   "Tar","Chairs","Rebar sticks","Beam pockets","Steps","Brick ledge"];
 
-/* ---------- state ---------- */
-let me = null, entry = null, log = [];
+/* ---------- state ----------
+   Hours belong to the DAY, not the visit: crews clock in and out at the shop
+   (measured), then work 2-3 lots. Lot visits capture quantities only, plus
+   free auto-stamps (form opened / form saved) that give the office a basis
+   for ALLOCATING day hours across lots later. Any per-lot time figure is an
+   allocation, never a measurement. Visits are stored UNDER their day. */
+let me = null, day = null, entry = null, days = [];
 const $ = id => document.getElementById(id);
 const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const today = () => new Date().toISOString().slice(0,10);
+const nowTime = () => new Date().toTimeString().slice(0,5);
+
+function persist(){
+  try{ localStorage.setItem("hartley_field_days", JSON.stringify(days)); }catch(err){}
+}
 
 function hrs(a,b){
   if(!a||!b) return 0;
@@ -141,7 +151,7 @@ function hrs(a,b){
 /* ---------- screens ---------- */
 
 function signIn(){
-  me = null; entry = null;
+  me = null; day = null; entry = null;
   $("who").innerHTML = "";
   $("bottom").style.display = "none";
   $("app").innerHTML =
@@ -154,38 +164,104 @@ function signIn(){
 function pick(i){
   me = ROSTER[i];
   $("who").innerHTML = esc(me.n)+' &middot; <b>'+CREWS[me.c].label+'</b>';
+  // resume today's open day for this lead, else start one
+  day = days.find(d => !d.end && d.lead === me.n && d.date === today()) || null;
+  day ? jobList() : startDayScreen();
+}
+
+/* ---------- the day: hours are captured HERE, once, measured ---------- */
+
+function startDayScreen(){
+  $("bottom").style.display = "none";
+  $("app").innerHTML =
+    '<button class="back" onclick="signIn()">&larr; Not me</button>' +
+    '<h2>Start day</h2>' +
+    '<p class="hint">Clock the day in once — you clocked in at the shop. ' +
+    'Lot entries take quantities only, no hours.</p>' +
+    '<label>Crew members</label>' +
+    [0,1,2].map(i => '<input id="dcn'+i+'" placeholder="Name" value="' +
+      (i === 0 ? esc(me.n) : '') + '" style="margin-bottom:9px">').join('') +
+    '<label>Day start</label><input type="time" id="dstart" value="'+nowTime()+'">' +
+    '<div style="margin-top:18px"><button onclick="startDay()">Start day</button></div>';
+}
+
+function startDay(){
+  const crew = [0,1,2].map(i => $("dcn"+i).value.trim()).filter(Boolean);
+  const start = $("dstart").value;
+  if(!crew.length || !start) return;
+  day = {lead:me.n, kind:CREWS[me.c].label, date:today(),
+         crew:crew, start:start, end:null, visits:[]};
+  days.push(day);
+  persist();
   jobList();
 }
 
+function endDayScreen(){
+  $("bottom").style.display = "none";
+  $("app").innerHTML =
+    '<button class="back" onclick="jobList()">&larr; Back to lots</button>' +
+    '<h2>End day</h2>' +
+    '<label>Day stop</label><input type="time" id="dend" value="'+nowTime()+'">' +
+    '<div style="margin-top:18px"><button onclick="endDay()">End day</button></div>';
+}
+
+function endDay(){
+  const end = $("dend").value;
+  if(!end) return;
+  day.end = end;
+  persist();
+  $("app").innerHTML =
+    '<h2>Day complete</h2>' +
+    '<div class="calc"><div class="big">'+hrs(day.start, day.end)+' h</div>' +
+    '<div class="lab">Measured day hours ('+esc(day.start)+'&ndash;'+esc(day.end)+
+    ', clocked at the shop) &middot; crew: '+esc(day.crew.join(", "))+'</div></div>' +
+    (day.visits.length
+      ? '<h2>Lots this day</h2>' + day.visits.map(v =>
+          '<div class="log"><b>'+esc(v.job)+'</b> &middot; '+esc(v.kind)+
+          ' &middot; form '+esc(v.opened_at)+'&ndash;'+esc(v.saved_at)+'</div>').join('')
+      : '<p class="hint">No lots logged this day.</p>') +
+    '<p class="hint">Per-lot hours are ALLOCATED from the day&#39;s measured hours ' +
+    'using these form stamps, in the office &mdash; never entered or measured on the lot.</p>' +
+    '<div style="margin-top:18px"><button onclick="signIn()">Done</button></div>';
+}
+
 function jobList(){
+  if(!day || day.end){ startDayScreen(); return; }
   const ph = CREWS[me.c].phases;
   const mine = JOBS.filter(j => j.p.some(x => ph.includes(x)));
   $("bottom").style.display = "none";
   $("app").innerHTML =
     '<button class="back" onclick="signIn()">&larr; Not me</button>' +
+    '<div class="calc"><div class="big">'+esc(day.start)+'</div>' +
+    '<div class="lab">Day started &middot; crew: '+esc(day.crew.join(", "))+
+    ' &middot; '+day.visits.length+' lot'+(day.visits.length===1?'':'s')+' logged</div></div>' +
+    '<button class="ghost" onclick="endDayScreen()">End day</button>' +
     '<h2>Pick the lot</h2>' +
     '<div class="people">' + mine.map(j =>
       '<button onclick="open_(\''+j.k+'\')">'+esc(j.k)+
       '<span>'+esc(j.a)+'</span></button>').join('') +
     '</div>' +
     '<p class="hint">Showing '+mine.length+' of '+JOBS.length+
-    ' lots — filtered to work your crew actually does.</p>' +
-    (log.length ? '<h2>Saved on this phone</h2>' + log.map(e =>
-      '<div class="log"><b>'+esc(e.job)+'</b> &middot; '+esc(e.kind)+
-      ' &middot; '+esc(e.date)+'</div>').join('') : '');
+    ' lots — filtered to work your crew actually does. Quantities only: your ' +
+    'hours were captured when the day started.</p>' +
+    (day.visits.length ? '<h2>Saved this day</h2>' + day.visits.map(v =>
+      '<div class="log"><b>'+esc(v.job)+'</b> &middot; '+esc(v.kind)+
+      ' &middot; form '+esc(v.opened_at)+'&ndash;'+esc(v.saved_at)+'</div>').join('') : '');
 }
 
 function open_(k){
+  if(!day || day.end){ startDayScreen(); return; }
+  // opened_at is a free auto-stamp -- with saved_at it is the office's basis
+  // for ALLOCATING day hours across lots. No hours are asked for here.
   entry = {job:k, kind:CREWS[me.c].label, by:me.n, date:today(),
-    crew:[{name:me.n,start:"",stop:""},{name:"",start:"",stop:""},{name:"",start:"",stop:""}],
-    el:{}, it:{}, notes:""};
+    opened_at: nowTime()};
   $("bottom").style.display = "block";
   const forms = {haul:fHaul, back:fBack, found:fFound, flat:fFlat};
   $("app").innerHTML =
     '<button class="back" onclick="jobList()">&larr; Different lot</button>' +
     '<h2>'+esc(k)+'</h2>' +
     '<label>Date</label><input type="date" id="date" value="'+today()+'">' +
-    forms[me.c]() + crewBlock() +
+    forms[me.c]() +
     '<label>Notes</label><textarea id="notes" placeholder="Anything the office needs to know"></textarea>';
   bindCalc();
 }
@@ -243,14 +319,6 @@ function sel(id, opts){
     opts.map(o=>'<option>'+esc(o)+'</option>').join('') + '</select>';
 }
 
-function crewBlock(){
-  return '<h2>Crew and hours</h2>' + entry.crew.map((p,i)=>
-    '<div class="crewline"><input id="cn'+i+'" placeholder="Name" value="'+esc(p.name)+'">' +
-    '<div class="row" style="margin-top:8px">' +
-    '<div><label>Start</label><input type="time" id="cs'+i+'"></div>' +
-    '<div><label>Stop</label><input type="time" id="ce'+i+'"></div></div></div>').join('');
-}
-
 /* ---------- live calculation ---------- */
 
 function bindCalc(){
@@ -278,26 +346,23 @@ function recalc(){
 /* ---------- save ---------- */
 
 function save(){
-  const e = {job:entry.job, kind:entry.kind, by:entry.by, date:$("date").value, fields:{}, crew:[]};
+  // A visit is quantities + free time stamps, stored UNDER its day.
+  // No hours live here: the day's start/stop are the measured hours.
+  const v = {job:entry.job, kind:entry.kind, by:entry.by, date:$("date").value,
+             opened_at:entry.opened_at, saved_at:nowTime(), fields:{}};
   document.querySelectorAll("#app input, #app select, #app textarea").forEach(el=>{
     if(!el.id || el.id === "date") return;
-    if(/^c[nse]\d$/.test(el.id)) return;
-    e.fields[el.id] = (el.type === "checkbox") ? el.checked : el.value;
+    v.fields[el.id] = (el.type === "checkbox") ? el.checked : el.value;
   });
-  entry.crew.forEach((_,i)=>{
-    const n = $("cn"+i).value;
-    if(n) e.crew.push({name:n, start:$("cs"+i).value, stop:$("ce"+i).value,
-      hours:hrs($("cs"+i).value, $("ce"+i).value)});
-  });
-  log.unshift(e);
-  try{ localStorage.setItem("hartley_field", JSON.stringify(log)); }catch(err){}
+  day.visits.push(v);
+  persist();
   jobList();
   $("app").insertAdjacentHTML("afterbegin",
-    '<div class="saved">Saved &mdash; '+esc(e.job)+'</div>');
+    '<div class="saved">Saved &mdash; '+esc(v.job)+'</div>');
   window.scrollTo(0,0);
 }
 
-try{ log = JSON.parse(localStorage.getItem("hartley_field") || "[]"); }catch(err){ log = []; }
+try{ days = JSON.parse(localStorage.getItem("hartley_field_days") || "[]"); }catch(err){ days = []; }
 signIn();
 </script>
 </body>
