@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Hartley Field">
+<meta name="theme-color" content="#101E36">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<title>Hartley Field Capture</title>
+<style>
+:root{
+  --navy:#101E36; --panel:#1A2C4C; --line:#2C4267; --ink:#EAF0F7;
+  --mute:#8CA0BC; --rust:#D2622A; --rust-d:#A94C1F; --ok:#4E9166;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--navy);color:var(--ink);
+  font:16px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{padding:0 0 96px}
+.wrap{max-width:520px;margin:0 auto;padding:0 16px}
+header{background:var(--panel);border-bottom:3px solid var(--rust);
+  padding:14px 16px calc(14px + env(safe-area-inset-top)) 16px;
+  padding-top:calc(14px + env(safe-area-inset-top));position:sticky;top:0;z-index:20}
+header .bar{max-width:520px;margin:0 auto;display:flex;align-items:baseline;gap:10px}
+h1{font-size:17px;font-weight:650;margin:0;letter-spacing:.01em}
+.who{margin-left:auto;font-size:13px;color:var(--mute)}
+.who b{color:var(--ink);font-weight:600}
+.demo{background:var(--rust-d);color:#fff;font-size:12.5px;padding:7px 16px;text-align:center}
+h2{font-size:15px;font-weight:650;margin:26px 0 10px;color:var(--rust)}
+label{display:block;font-size:13.5px;color:var(--mute);margin:14px 0 5px}
+input,select,textarea{width:100%;background:var(--panel);color:var(--ink);
+  border:1px solid var(--line);border-radius:9px;padding:13px 12px;font-size:17px;
+  font-family:inherit;appearance:none}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--rust);outline-offset:1px;border-color:var(--rust)}
+textarea{min-height:76px;font-size:16px}
+.row{display:flex;gap:10px}.row>div{flex:1}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:0 10px}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0 8px}
+button{font-family:inherit;font-size:16px;border:0;border-radius:9px;padding:14px;
+  background:var(--rust);color:#fff;font-weight:600;width:100%}
+button.ghost{background:transparent;border:1px solid var(--line);color:var(--ink);font-weight:500}
+button:active{opacity:.75}
+.people button{margin-bottom:9px;text-align:left;background:var(--panel);
+  border:1px solid var(--line);padding:16px 14px;display:flex;align-items:center}
+.people button span{margin-left:auto;font-size:12.5px;color:var(--mute)}
+.calc{background:var(--panel);border-left:3px solid var(--rust);border-radius:0 9px 9px 0;
+  padding:14px;margin:18px 0}
+.calc .big{font-size:34px;font-weight:650;letter-spacing:-.02em;line-height:1}
+.calc .lab{font-size:13px;color:var(--mute);margin-top:5px}
+.tot{font-size:13.5px;color:var(--mute);margin-top:7px;text-align:right}
+.tot b{color:var(--ink);font-size:16px}
+.crewline{border-top:1px solid var(--line);padding-top:12px;margin-top:12px}
+.chk{display:flex;align-items:center;gap:11px;margin:15px 0;font-size:16px}
+.chk input{width:26px;height:26px;flex:0 0 26px;margin:0}
+.bottom{position:fixed;left:0;right:0;bottom:0;background:var(--panel);
+  border-top:1px solid var(--line);padding:12px 16px calc(12px + env(safe-area-inset-bottom))}
+.bottom .wrap{padding:0}
+.saved{background:var(--ok);color:#fff;padding:11px;border-radius:9px;text-align:center;
+  font-size:14.5px;margin-bottom:10px}
+.log{font-size:13.5px;color:var(--mute);border-top:1px solid var(--line);padding:11px 0}
+.log b{color:var(--ink);font-weight:600}
+.hint{font-size:13px;color:var(--mute);margin-top:6px}
+.back{background:none;border:0;color:var(--mute);font-size:14px;padding:14px 0;width:auto}
+</style>
+</head>
+<body>
+
+<header><div class="bar">
+  <h1>Hartley Field Capture</h1>
+  <div class="who" id="who"></div>
+</div></header>
+<div class="demo">Demo build — sample job list, nothing is sent anywhere</div>
+
+<div class="wrap" id="app"></div>
+
+<div class="bottom" id="bottom" style="display:none"><div class="wrap">
+  <button onclick="save()" id="savebtn">Save entry</button>
+</div></div>
+
+<script>
+/* ---------- CONFIG: everything that changes when real data lands ---------- */
+
+// Crew leads → which form they get. CONFIRM ASSIGNMENTS WITH THE FIELD SUPER.
+const ROSTER = [
+  {n:"Marco Delgado",      c:"haul"},
+  {n:"Tomas Herrera",     c:"haul"},
+  {n:"Andres Fuentes",      c:"haul"},
+  {n:"Cody Merrill",     c:"back"},
+  {n:"Felix Zamora",     c:"back"},
+  {n:"Oscar Valdez",  c:"found"},
+  {n:"Emilio",            c:"found"},
+  {n:"Diego Montes",     c:"flat"},
+  {n:"Marcus",          c:"flat"}
+];
+
+const CREWS = {
+  haul:  {label:"Dig / Hauling",  phases:["Dig","Utilities"]},
+  back:  {label:"Backfill",       phases:["Backfill"]},
+  found: {label:"Foundations",    phases:["Foundation"]},
+  flat:  {label:"Flatwork",       phases:["Flatwork"]}
+};
+
+// SAMPLE jobs only. Real 94-lot list comes from column A of the Master Job Schedule.
+const JOBS = [
+  {k:"SAMPLE 01 1 Toll",     a:"Sample subdivision, Lot 1",  p:["Dig","Utilities","Backfill","Foundation","Flatwork"]},
+  {k:"SAMPLE 02 1 Toll",     a:"Sample subdivision, Lot 2",  p:["Dig","Utilities","Backfill","Foundation","Flatwork"]},
+  {k:"SAMPLE 14 3 KB",       a:"Sample subdivision, Lot 14", p:["Backfill","Foundation","Flatwork"]},
+  {k:"SAMPLE 22 3 KB",       a:"Sample subdivision, Lot 22", p:["Foundation","Flatwork"]},
+  {k:"SAMPLE 07 2 Tresidio", a:"Sample subdivision, Lot 7",  p:["Dig","Utilities","Foundation"]},
+  {k:"SAMPLE 31 5 Avimor",   a:"Sample subdivision, Lot 31", p:["Dig","Utilities","Backfill"]},
+  {k:"SAMPLE 09 2 Shea",     a:"Sample subdivision, Lot 9",  p:["Flatwork"]}
+];
+
+const MATERIALS = ["Pit run","3/4 minus","Structural fill","Topsoil","Sand","Spoils out","Other"];
+const EQUIP     = ["EX-01","EX-02","EX-03","LD-01","LD-02","SK-01","SK-02","Other"];
+
+// Flatwork elements: square feet by area. Drives the thickness calc.
+const FLAT_EL = [["garage","Garage"],["drive","Driveway"],["patio","Patio"],
+  ["porch","Porch"],["walk","Sidewalk"],["stoop","Stoop"],["other","Other"]];
+
+// Foundation piece counts — these are rate card lines, so this form is close to the invoice.
+const FND_IT = ["Columns","Straps","Vents","Anchor bolts","Bolts","Sonotubes",
+  "Tar","Chairs","Rebar sticks","Beam pockets","Steps","Brick ledge"];
+
+/* ---------- state ---------- */
+let me = null, entry = null, log = [];
+const $ = id => document.getElementById(id);
+const num = v => { const n = parseFloat(v); return isNaN(n) ? 0 : n; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const today = () => new Date().toISOString().slice(0,10);
+
+function hrs(a,b){
+  if(!a||!b) return 0;
+  const [h1,m1]=a.split(":").map(Number), [h2,m2]=b.split(":").map(Number);
+  let d=(h2*60+m2)-(h1*60+m1); if(d<0) d+=1440;
+  return Math.round(d/60*100)/100;
+}
+
+/* ---------- screens ---------- */
+
+function signIn(){
+  me = null; entry = null;
+  $("who").innerHTML = "";
+  $("bottom").style.display = "none";
+  $("app").innerHTML =
+    '<h2>Who is filling this out?</h2><div class="people">' +
+    ROSTER.map((r,i)=>'<button onclick="pick('+i+')">'+esc(r.n)+
+      '<span>'+CREWS[r.c].label+'</span></button>').join('') +
+    '</div>';
+}
+
+function pick(i){
+  me = ROSTER[i];
+  $("who").innerHTML = esc(me.n)+' &middot; <b>'+CREWS[me.c].label+'</b>';
+  jobList();
+}
+
+function jobList(){
+  const ph = CREWS[me.c].phases;
+  const mine = JOBS.filter(j => j.p.some(x => ph.includes(x)));
+  $("bottom").style.display = "none";
+  $("app").innerHTML =
+    '<button class="back" onclick="signIn()">&larr; Not me</button>' +
+    '<h2>Pick the lot</h2>' +
+    '<div class="people">' + mine.map(j =>
+      '<button onclick="open_(\''+j.k+'\')">'+esc(j.k)+
+      '<span>'+esc(j.a)+'</span></button>').join('') +
+    '</div>' +
+    '<p class="hint">Showing '+mine.length+' of '+JOBS.length+
+    ' lots — filtered to work your crew actually does.</p>' +
+    (log.length ? '<h2>Saved on this phone</h2>' + log.map(e =>
+      '<div class="log"><b>'+esc(e.job)+'</b> &middot; '+esc(e.kind)+
+      ' &middot; '+esc(e.date)+'</div>').join('') : '');
+}
+
+function open_(k){
+  entry = {job:k, kind:CREWS[me.c].label, by:me.n, date:today(),
+    crew:[{name:me.n,start:"",stop:""},{name:"",start:"",stop:""},{name:"",start:"",stop:""}],
+    el:{}, it:{}, notes:""};
+  $("bottom").style.display = "block";
+  const forms = {haul:fHaul, back:fBack, found:fFound, flat:fFlat};
+  $("app").innerHTML =
+    '<button class="back" onclick="jobList()">&larr; Different lot</button>' +
+    '<h2>'+esc(k)+'</h2>' +
+    '<label>Date</label><input type="date" id="date" value="'+today()+'">' +
+    forms[me.c]() + crewBlock() +
+    '<label>Notes</label><textarea id="notes" placeholder="Anything the office needs to know"></textarea>';
+  bindCalc();
+}
+
+/* ---------- forms ---------- */
+
+function fHaul(){ return ''
+  + '<label>Equipment / truck</label>' + sel("equip", EQUIP)
+  + '<label>Material</label>' + sel("mat", MATERIALS)
+  + '<div class="row"><div><label>Loads</label><input type="number" inputmode="decimal" id="loads" class="calc-in"></div>'
+  + '<div><label>Yards per load</label><input type="number" inputmode="decimal" id="ypl" class="calc-in" value="12"></div></div>'
+  + '<div class="tot">Total yards <b id="totyd">0</b></div>'
+  + '<label>Pit or stockpile</label><input id="pit" placeholder="Where it came from or went">'
+  + '<div class="row"><div><label>Round trip (min)</label><input type="number" inputmode="numeric" id="cycle"></div>'
+  + '<div><label>Standby (min)</label><input type="number" inputmode="numeric" id="standby"></div></div>'; }
+
+function fBack(){ return ''
+  + '<label>Equipment</label>' + sel("equip", EQUIP)
+  + '<div class="row"><div><label>Machine hours</label><input type="number" inputmode="decimal" id="mhrs"></div>'
+  + '<div><label>Idle hours</label><input type="number" inputmode="decimal" id="idle"></div></div>'
+  + '<label>Material imported</label>' + sel("mat", MATERIALS)
+  + '<div class="row"><div><label>Yards in</label><input type="number" inputmode="decimal" id="ydin"></div>'
+  + '<div><label>Yards out</label><input type="number" inputmode="decimal" id="ydout"></div></div>'
+  + '<div class="chk"><input type="checkbox" id="compact"><label for="compact" style="margin:0;color:var(--ink)">Compaction test passed</label></div>'
+  + '<div class="chk"><input type="checkbox" id="done"><label for="done" style="margin:0;color:var(--ink)">Backfill complete — excavation can be billed</label></div>'; }
+
+function fFound(){ return ''
+  + '<h2>Measures</h2>'
+  + '<div class="row"><div><label>Wall LF</label><input type="number" inputmode="decimal" id="wall_lf"></div>'
+  + '<div><label>Footing LF</label><input type="number" inputmode="decimal" id="ftg_lf"></div></div>'
+  + '<h2>Concrete placed</h2>'
+  + '<div class="grid3">'
+  + '<div><label>Wall CY</label><input type="number" inputmode="decimal" id="cy_wall" class="calc-in"></div>'
+  + '<div><label>Footing CY</label><input type="number" inputmode="decimal" id="cy_ftg" class="calc-in"></div>'
+  + '<div><label>Interior CY</label><input type="number" inputmode="decimal" id="cy_int" class="calc-in"></div></div>'
+  + '<div class="tot">Total <b id="cytot">0</b> CY</div>'
+  + '<h2>Counts</h2><div class="grid">'
+  + FND_IT.map((n,i)=>'<div><label>'+esc(n)+'</label><input type="number" inputmode="numeric" id="it'+i+'"></div>').join('')
+  + '</div>'
+  + '<div class="chk"><input type="checkbox" id="pump"><label for="pump" style="margin:0;color:var(--ink)">Pump used</label></div>'
+  + '<div class="chk"><input type="checkbox" id="strip"><label for="strip" style="margin:0;color:var(--ink)">Stripped</label></div>'; }
+
+function fFlat(){ return ''
+  + '<h2>Square feet poured</h2><div class="grid">'
+  + FLAT_EL.map(([k,n])=>'<div><label>'+esc(n)+'</label><input type="number" inputmode="decimal" id="el_'+k+'" class="calc-in"></div>').join('')
+  + '</div><div class="tot">Total <b id="sftot">0</b> SF</div>'
+  + '<label>Concrete delivered (CY)</label><input type="number" inputmode="decimal" id="yards" class="calc-in">'
+  + '<div class="calc"><div class="big" id="thick">&mdash;</div>'
+  + '<div class="lab">Average thickness. A 4&quot; nominal slab should land near 4.</div></div>'
+  + '<div class="chk"><input type="checkbox" id="pump"><label for="pump" style="margin:0;color:var(--ink)">Pump used</label></div>'
+  + '<div class="chk"><input type="checkbox" id="partial"><label for="partial" style="margin:0;color:var(--ink)">Partial pour — returning</label></div>'; }
+
+function sel(id, opts){
+  return '<select id="'+id+'"><option value=""></option>' +
+    opts.map(o=>'<option>'+esc(o)+'</option>').join('') + '</select>';
+}
+
+function crewBlock(){
+  return '<h2>Crew and hours</h2>' + entry.crew.map((p,i)=>
+    '<div class="crewline"><input id="cn'+i+'" placeholder="Name" value="'+esc(p.name)+'">' +
+    '<div class="row" style="margin-top:8px">' +
+    '<div><label>Start</label><input type="time" id="cs'+i+'"></div>' +
+    '<div><label>Stop</label><input type="time" id="ce'+i+'"></div></div></div>').join('');
+}
+
+/* ---------- live calculation ---------- */
+
+function bindCalc(){
+  document.querySelectorAll(".calc-in").forEach(el => el.addEventListener("input", recalc));
+  recalc();
+}
+
+function recalc(){
+  if(me.c === "haul" && $("totyd")){
+    $("totyd").textContent = Math.round(num($("loads").value) * num($("ypl").value) * 100)/100;
+  }
+  if(me.c === "found" && $("cytot")){
+    $("cytot").textContent = Math.round((num($("cy_wall").value)+num($("cy_ftg").value)+num($("cy_int").value))*100)/100;
+  }
+  if(me.c === "flat" && $("sftot")){
+    const sf = FLAT_EL.reduce((a,[k]) => a + num($("el_"+k).value), 0);
+    $("sftot").textContent = Math.round(sf*10)/10;
+    const cy = num($("yards").value);
+    $("thick").textContent = (sf > 0 && cy > 0)
+      ? (Math.round((cy*27/sf)*12*100)/100) + '"'
+      : "\u2014";
+  }
+}
+
+/* ---------- save ---------- */
+
+function save(){
+  const e = {job:entry.job, kind:entry.kind, by:entry.by, date:$("date").value, fields:{}, crew:[]};
+  document.querySelectorAll("#app input, #app select, #app textarea").forEach(el=>{
+    if(!el.id || el.id === "date") return;
+    if(/^c[nse]\d$/.test(el.id)) return;
+    e.fields[el.id] = (el.type === "checkbox") ? el.checked : el.value;
+  });
+  entry.crew.forEach((_,i)=>{
+    const n = $("cn"+i).value;
+    if(n) e.crew.push({name:n, start:$("cs"+i).value, stop:$("ce"+i).value,
+      hours:hrs($("cs"+i).value, $("ce"+i).value)});
+  });
+  log.unshift(e);
+  try{ localStorage.setItem("hartley_field", JSON.stringify(log)); }catch(err){}
+  jobList();
+  $("app").insertAdjacentHTML("afterbegin",
+    '<div class="saved">Saved &mdash; '+esc(e.job)+'</div>');
+  window.scrollTo(0,0);
+}
+
+try{ log = JSON.parse(localStorage.getItem("hartley_field") || "[]"); }catch(err){ log = []; }
+signIn();
+</script>
+</body>
+</html>
