@@ -30,9 +30,13 @@ h1{font-size:17px;font-weight:650;margin:0;letter-spacing:.01em}
 .demo{background:var(--rust-d);color:#fff;font-size:12.5px;padding:7px 16px;text-align:center}
 h2{font-size:15px;font-weight:650;margin:26px 0 10px;color:var(--rust)}
 label{display:block;font-size:13.5px;color:var(--mute);margin:14px 0 5px}
-input,select,textarea{width:100%;background:var(--panel);color:var(--ink);
+input:not([type=checkbox]),select,textarea{width:100%;background:var(--panel);color:var(--ink);
   border:1px solid var(--line);border-radius:9px;padding:13px 12px;font-size:17px;
   font-family:inherit;appearance:none}
+/* checkboxes keep NATIVE rendering (appearance:none strips the checkmark on
+   iOS, leaving taps with no visual feedback); accent paints it burnt orange */
+input[type=checkbox]{appearance:auto;-webkit-appearance:checkbox;
+  accent-color:var(--rust)}
 input:focus,select:focus,textarea:focus{outline:2px solid var(--rust);outline-offset:1px;border-color:var(--rust)}
 textarea{min-height:76px;font-size:16px}
 .row{display:flex;gap:10px}.row>div{flex:1}
