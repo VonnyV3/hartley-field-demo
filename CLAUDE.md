@@ -13,6 +13,11 @@ pushing to `main`.
   the dig foreman (dig foreman, runs dispatch), with the field super and the scheduler supporting.
 - **JOBS is sample data.** Real lots carry real addresses and never go into
   this public repo.
+- **No real employee names and no real lot street addresses** in anything
+  under field-demo or anywhere else that publishes publicly. Use pseudonyms
+  for people and registry-checked fabricated identifiers for lots (scan
+  addresses, lot/block keys AND house numbers against the registry before
+  pushing — a swapped street name with a real house number is not scrubbed).
 - **Commit and push after every completed change.**
 
 ## Operations — how scheduling actually works (the scheduler interview, 10 Sept 2026)

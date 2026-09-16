@@ -256,8 +256,8 @@ function jobList(){
       ' &middot; form '+esc(v.opened_at)+'&ndash;'+esc(v.saved_at)+'</div>').join('') : '');
 }
 
-/* Winter flatwork goes in partial and the crew returns weeks later (the scheduler
-   tracks Y/N/P). All flatwork visits on a job share its job key and carry a
+/* Winter flatwork goes in partial and the crew returns weeks later (the
+   scheduler tracks Y/N/P). All flatwork visits on a job share its job key and carry a
    visit sequence; only a NON-partial save marks the flatwork complete. Both
    entries are always kept -- never merged, never overwritten. */
 function flatState(jobKey){
