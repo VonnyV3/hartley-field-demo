@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hartley Field — demo</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Hartley Field">
+<meta name="theme-color" content="#1E3A5F">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1B1F24; --muted:#6B6F76; --hair:#D9D7D0; --paper:#FFFFFF; --surface:#F2F1EC; --page:#E8E6E0;
+  --navy:#1E3A5F; --orange:#C8571D; --orange-ink:#8A3A10;
+  --t0:#E7E5DF; --t0-ink:#55544F; --t1:#DCE8F5; --t1-ink:#133F66; --t2:#F6E7C8; --t2-ink:#6B4C08;
+  --ok:#2E7D5B; --ok-bg:#E1F1EA; --warn:#B5851F; --warn-bg:#FBF0D9;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){ --page:#2A2C30; } }
+:root[data-theme="dark"]{ --page:#2A2C30; }
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--page);color:var(--ink);font-family:"IBM Plex Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;font-size:15px;line-height:1.35;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit;cursor:pointer}
+input,select{font:inherit;color:inherit}
+.tabular{font-variant-numeric:tabular-nums}
+
+/* ---- demo chrome ---- */
+.demo-bar{max-width:1120px;margin:0 auto;padding:14px 16px 6px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;color:#4B4E55;font-size:13px}
+.demo-bar .label{margin-right:auto;color:#4B4E55}
+.demo-bar .label strong{color:var(--ink);font-weight:600}
+.pill{display:inline-flex;gap:0;border:1px solid var(--hair);border-radius:999px;background:var(--paper);overflow:hidden}
+.pill button{border:0;background:transparent;padding:6px 12px;color:var(--muted)}
+.pill button[aria-pressed="true"]{background:var(--navy);color:#fff}
+.demo-bar .reset{border:1px solid var(--hair);background:var(--paper);border-radius:999px;padding:6px 12px;color:var(--muted)}
+.stage{max-width:1120px;margin:0 auto;padding:6px 16px 40px;display:flex;gap:28px;align-items:flex-start;justify-content:center;flex-wrap:wrap}
+
+/* ---- phone ---- */
+.phone{width:390px;max-width:100%;height:780px;background:var(--paper);border-radius:34px;border:1px solid #BEBCB4;box-shadow:0 24px 60px rgba(20,22,28,.18);overflow:hidden;position:relative;display:flex;flex-direction:column}
+.status{height:44px;display:flex;align-items:center;justify-content:space-between;padding:0 22px;font-size:12px;color:var(--muted)}
+.status .notch{position:absolute;left:50%;top:10px;transform:translateX(-50%);width:110px;height:24px;background:#1B1F24;border-radius:14px}
+.screen{flex:1;overflow-y:auto;display:none;flex-direction:column}
+.screen.active{display:flex}
+.appbar{padding:8px 18px 12px;display:flex;align-items:center;gap:10px}
+.appbar h1{margin:0;font-size:20px;font-weight:600;letter-spacing:-.01em}
+.appbar .sub{color:var(--muted);font-size:13px}
+.appbar .back{border:0;background:transparent;padding:6px 8px 6px 0;color:var(--navy);font-weight:500}
+.appbar .who{margin-left:auto;font-size:12px;color:var(--muted);text-align:right}
+.body{padding:0 18px 18px;display:flex;flex-direction:column;gap:12px}
+.footerbar{padding:12px 18px 18px;border-top:1px solid var(--hair);background:var(--paper)}
+.btn{display:block;width:100%;border:0;border-radius:12px;padding:15px 16px;font-weight:600;font-size:16px;text-align:center}
+.btn.primary{background:var(--orange);color:#fff}
+.btn.primary:active{background:var(--orange-ink)}
+.btn.quiet{background:var(--surface);color:var(--ink)}
+.btn.line{background:transparent;border:1px solid var(--hair);color:var(--ink)}
+.btn[disabled]{opacity:.45;cursor:default}
+:focus-visible{outline:3px solid var(--navy);outline-offset:2px}
+
+/* sign in */
+.signin{flex:1;display:flex;flex-direction:column;justify-content:center;padding:28px 26px;gap:16px}
+.signin .mark{font-weight:600;font-size:26px;letter-spacing:-.02em;color:var(--navy)}
+.signin .mark small{display:block;font-weight:400;font-size:14px;color:var(--muted);letter-spacing:0;margin-top:2px}
+.ms{display:flex;align-items:center;gap:12px;border:1px solid var(--hair);border-radius:12px;background:var(--paper);padding:14px 16px;font-weight:500;width:100%}
+.ms .grid{width:20px;height:20px;display:grid;grid-template-columns:1fr 1fr;gap:2px}
+.ms .grid i{display:block}
+.persona{border:1px solid var(--hair);border-radius:12px;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;background:var(--paper);width:100%;text-align:left}
+.persona:hover{border-color:var(--navy)}
+.persona .n{font-weight:600}
+.persona .r{color:var(--muted);font-size:13px}
+.note{font-size:12.5px;color:var(--muted);line-height:1.4}
+
+/* lot cards */
+.lot{border:1px solid var(--hair);border-radius:14px;background:var(--paper);padding:14px 14px 12px;display:flex;flex-direction:column;gap:6px;text-align:left;width:100%}
+.lot .key{font-weight:600;font-size:17px}
+.lot .addr{color:var(--muted);font-size:13px}
+.lot .row{display:flex;justify-content:space-between;align-items:center;margin-top:4px}
+.chip{display:inline-block;border-radius:999px;padding:3px 10px;font-size:12px;font-weight:500}
+.chip.scope{background:var(--t1);color:var(--t1-ink)}
+.chip.pending{background:var(--warn-bg);color:var(--t2-ink)}
+.chip.sent{background:var(--ok-bg);color:var(--ok)}
+.chip.returned{background:#F8E0DC;color:#8A2F22}
+.chip.transfer{background:var(--orange);color:#fff}
+.chip.stock{background:var(--surface);color:var(--muted)}
+.search{display:flex;gap:8px;align-items:center;border:1px dashed var(--hair);border-radius:12px;padding:12px 14px;color:var(--muted);font-size:14px;background:var(--paper);width:100%;text-align:left}
+.section-h{font-size:12.5px;color:var(--muted);margin:8px 0 -4px}
+
+/* form */
+.tier{border-radius:14px;overflow:hidden}
+.tier.t0{background:var(--t0);color:var(--t0-ink)}
+.tier.t1{background:var(--paper);border:1px solid var(--hair)}
+.tier.t2{background:var(--t2);color:var(--t2-ink)}
+.tier .th{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;font-size:12.5px;font-weight:500}
+.tier.t1 .th{background:var(--t1);color:var(--t1-ink)}
+.tier .th .tag{font-weight:400;opacity:.85}
+.t0 .kv{padding:6px 14px 12px;display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:13px}
+.t0 .kv b{display:block;font-weight:600;color:var(--ink);font-size:15px}
+.frow{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 14px;border-top:1px solid var(--hair)}
+.tier.t1 .frow:first-of-type{border-top:0}
+.frow label{flex:1;font-size:14px}
+.frow .hint{display:block;color:var(--muted);font-size:12px}
+.frow input[type=number],.frow input[type=text],.frow select{width:104px;border:1px solid var(--hair);border-radius:8px;padding:8px 10px;background:var(--paper);text-align:right}
+.frow input[type=text]{text-align:left;width:150px}
+.frow select{text-align:left;width:150px}
+.seg{display:inline-flex;border:1px solid var(--hair);border-radius:10px;overflow:hidden}
+.seg button{border:0;background:var(--paper);padding:8px 12px;color:var(--muted);font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--navy);color:#fff}
+.total{display:flex;justify-content:space-between;padding:12px 14px;background:var(--surface);font-weight:600}
+.t2 .frow{border-top:1px solid rgba(107,76,8,.18)}
+.t2 .drawer{display:none}
+.t2.open .drawer{display:block}
+.t2 .th button{border:0;background:transparent;color:inherit;font-weight:500;padding:0}
+.t2 input,.t2 select{border-color:rgba(107,76,8,.3)}
+.crewrow{display:grid;grid-template-columns:1fr 80px;gap:8px;padding:8px 14px;align-items:center;border-top:1px solid rgba(107,76,8,.18);font-size:14px}
+.crewrow input{width:100%;border:1px solid rgba(107,76,8,.3);border-radius:8px;padding:8px 10px;text-align:right;background:var(--paper)}
+
+/* driver */
+.haulcard{border:1px solid var(--hair);border-radius:14px;background:var(--paper);padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.haulcard .ft{display:flex;align-items:center;gap:8px;font-weight:600}
+.haulcard .ft .arrow{color:var(--muted);font-weight:400}
+.haulcard .meta{display:flex;gap:14px;color:var(--muted);font-size:13px}
+.picker{display:flex;flex-direction:column;gap:8px}
+.opt{border:1px solid var(--hair);border-radius:12px;background:var(--paper);padding:12px 14px;display:flex;justify-content:space-between;align-items:center;width:100%;text-align:left}
+.opt[aria-pressed="true"]{border-color:var(--navy);box-shadow:inset 0 0 0 1px var(--navy)}
+.opt .k{font-weight:600}
+.opt .s{color:var(--muted);font-size:13px}
+.counter{display:flex;flex-direction:column;align-items:center;gap:6px;padding:8px 0 0}
+.count{font-size:96px;line-height:1;font-weight:600;letter-spacing:-.04em;color:var(--navy)}
+.count small{display:block;font-size:14px;font-weight:400;letter-spacing:0;color:var(--muted);text-align:center}
+.bigtap{width:100%;border:0;border-radius:20px;background:var(--orange);color:#fff;font-size:22px;font-weight:600;padding:30px 16px;box-shadow:0 8px 0 var(--orange-ink);transform:translateY(0)}
+.bigtap:active{transform:translateY(6px);box-shadow:0 2px 0 var(--orange-ink)}
+.loadlist{display:flex;flex-direction:column;gap:0;border:1px solid var(--hair);border-radius:12px;overflow:hidden;background:var(--paper)}
+.loadlist div{display:flex;justify-content:space-between;padding:9px 14px;border-top:1px solid var(--hair);font-size:14px}
+.loadlist div:first-child{border-top:0}
+.loadlist .empty{color:var(--muted);justify-content:center}
+.hstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.hstats div{background:var(--surface);border-radius:12px;padding:10px 12px}
+.hstats b{display:block;font-size:20px;font-weight:600}
+.hstats span{color:var(--muted);font-size:12.5px}
+.transfer{display:flex;gap:10px;align-items:flex-start;background:var(--orange);color:#fff;border-radius:12px;padding:12px 14px;font-size:13.5px;line-height:1.4}
+.transfer b{display:block;font-size:14px}
+
+/* toast */
+.toast{position:absolute;left:18px;right:18px;bottom:96px;background:var(--ink);color:#fff;border-radius:12px;padding:12px 14px;font-size:14px;opacity:0;transform:translateY(8px);transition:opacity .2s,transform .2s;pointer-events:none}
+.toast.show{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}.bigtap{transition:none}}
+
+/* ---- office ---- */
+.office{width:620px;max-width:100%;min-height:780px;background:var(--paper);border-radius:18px;border:1px solid #BEBCB4;box-shadow:0 24px 60px rgba(20,22,28,.14);display:none;flex-direction:column;overflow:hidden}
+.office.active{display:flex}
+.office .top{padding:18px 22px 12px;border-bottom:1px solid var(--hair);display:flex;align-items:baseline;gap:12px}
+.office .top h1{margin:0;font-size:20px;font-weight:600}
+.office .top .sub{color:var(--muted);font-size:13px}
+.office .cols{display:grid;grid-template-columns:230px 1fr;flex:1;min-height:0}
+.inbox{border-right:1px solid var(--hair);overflow-y:auto}
+.inbox .grp{padding:10px 14px 4px;font-size:12px;color:var(--muted)}
+.inbox button{display:block;width:100%;text-align:left;border:0;background:transparent;padding:10px 14px;border-top:1px solid var(--hair)}
+.inbox button[aria-pressed="true"]{background:var(--surface)}
+.inbox .k{font-weight:600;font-size:14px}
+.inbox .m{color:var(--muted);font-size:12.5px;display:flex;justify-content:space-between;margin-top:2px}
+.cover{padding:18px 22px;overflow-y:auto;display:flex;flex-direction:column;gap:14px}
+.cover h2{margin:0;font-size:17px;font-weight:600}
+.cover .hd{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;font-size:13px;color:var(--muted)}
+.cover .hd b{color:var(--ink);font-weight:500}
+.lines{border:1px solid var(--hair);border-radius:12px;overflow:hidden}
+.lines .ln{display:grid;grid-template-columns:1fr auto auto;gap:12px;padding:9px 14px;border-top:1px solid var(--hair);font-size:14px;align-items:center}
+.lines .ln:first-child{border-top:0}
+.lines .ln .src{color:var(--muted);font-size:12px}
+.lines .ln .code{color:var(--muted);font-size:12px;width:52px;text-align:right}
+.lines .ln.dim{color:var(--muted)}
+.lines .ln.dim .v{color:var(--muted)}
+.lines .ln .v{font-weight:600;text-align:right;min-width:86px}
+.sticky{background:var(--warn-bg);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--t2-ink)}
+.sticky b{font-weight:600}
+.actions{display:flex;gap:10px}
+.actions .btn{padding:12px}
+.retnote{display:none;gap:8px}
+.retnote.show{display:flex}
+.retnote input{flex:1;border:1px solid var(--hair);border-radius:10px;padding:10px 12px}
+.emptycover{color:var(--muted);padding:40px 0;text-align:center}
+@media (max-width:1040px){ .office .cols{grid-template-columns:1fr} .inbox{border-right:0;border-bottom:1px solid var(--hair);max-height:220px} }
+</style>
+</head>
+<body>
+
+<div class="demo-bar">
+  <div class="label"><strong>Demo controls</strong> — not part of the app. In the real app, who you are comes from the Microsoft sign-in.</div>
+  <div class="pill" role="group" aria-label="Language">
+    <button id="langEN" aria-pressed="true" onclick="setLang('en')">EN</button>
+    <button id="langES" aria-pressed="false" onclick="setLang('es')">ES</button>
+  </div>
+  <button class="reset" onclick="resetAll()">Reset demo</button>
+</div>
+
+<div class="stage">
+  <div class="phone" id="phone">
+    <div class="status"><span id="clock" class="tabular">6:14</span><span class="notch"></span><span>▮▮▮ ▲</span></div>
+
+    <!-- SIGN IN -->
+    <section class="screen active" id="s-signin">
+      <div class="signin">
+        <div class="mark">Hartley Field<small data-i="signin_sub">Excavation · Foundations · Flatwork</small></div>
+        <button class="ms" onclick="toast(t('ms_toast'))">
+          <span class="grid"><i style="background:#F25022"></i><i style="background:#7FBA00"></i><i style="background:#00A4EF"></i><i style="background:#FFB900"></i></span>
+          <span data-i="ms">Continue with Microsoft</span>
+        </button>
+        <p class="note" data-i="signin_note">Demo only: pick who you are. The real app already knows — your name, role and which crews you lead come from the office roster.</p>
+        <button class="persona" onclick="signIn('luis')"><span><span class="n">Luis Ortega</span><br><span class="r" data-i="p_luis">Crew lead · Flatwork · AH Concrete</span></span><span>›</span></button>
+        <button class="persona" onclick="signIn('ramon')"><span><span class="n">Ramon Castillo</span><br><span class="r" data-i="p_ramon">Driver · End dump · AH Excavation</span></span><span>›</span></button>
+        <button class="persona" onclick="signIn('office')"><span><span class="n">Office</span><br><span class="r" data-i="p_office">Billing · office app</span></span><span>›</span></button>
+      </div>
+    </section>
+
+    <!-- CREW LEAD: TODAY -->
+    <section class="screen" id="s-today">
+      <div class="appbar"><div><h1 data-i="today">Today</h1><div class="sub" id="today-date"></div></div><div class="who">Luis Ortega<br><span data-i="role_luis">Flatwork lead</span></div></div>
+      <div class="body" id="today-list"></div>
+      <div class="footerbar"><button class="btn line" onclick="toast(t('search_toast'))" data-i="not_on_list">Not on my list — find a lot</button></div>
+    </section>
+
+    <!-- CREW LEAD: FLATWORK FORM -->
+    <section class="screen" id="s-form">
+      <div class="appbar"><button class="back" onclick="show('s-today')">‹ <span data-i="today">Today</span></button><div><h1 data-i="flatwork">Flatwork</h1></div><div class="who" id="form-who"></div></div>
+      <div class="body" id="form-body"></div>
+      <div class="footerbar"><button class="btn primary" id="form-submit" onclick="submitForm()" data-i="send">Send to the office</button></div>
+    </section>
+
+    <!-- DRIVER: TODAY'S HAULS -->
+    <section class="screen" id="s-hauls">
+      <div class="appbar"><div><h1 data-i="hauls">Today's hauls</h1><div class="sub" id="hauls-date"></div></div><div class="who">Ramon Castillo<br><span data-i="truck_end">End dump · T-14</span></div></div>
+      <div class="body" id="hauls-list"></div>
+      <div class="footerbar"><button class="btn primary" onclick="startHaul()" data-i="new_haul">Start a haul</button></div>
+    </section>
+
+    <!-- DRIVER: NEW HAUL -->
+    <section class="screen" id="s-newhaul">
+      <div class="appbar"><button class="back" onclick="show('s-hauls')">‹ <span data-i="hauls">Today's hauls</span></button><div><h1 data-i="new_haul">Start a haul</h1></div></div>
+      <div class="body">
+        <div class="section-h" data-i="from">From</div>
+        <div class="picker" id="pick-from"></div>
+        <div class="section-h" data-i="to">To</div>
+        <div class="picker" id="pick-to"></div>
+        <div class="section-h" data-i="material">Material</div>
+        <div class="picker" id="pick-mat"></div>
+        <div id="transfer-note"></div>
+      </div>
+      <div class="footerbar"><button class="btn primary" id="haul-go" disabled onclick="beginCounting()" data-i="begin">Begin</button></div>
+    </section>
+
+    <!-- DRIVER: COUNTER -->
+    <section class="screen" id="s-counter">
+      <div class="appbar"><button class="back" onclick="show('s-hauls')">‹ <span data-i="hauls">Today's hauls</span></button><div><h1 id="counter-title"></h1><div class="sub" id="counter-sub"></div></div></div>
+      <div class="body">
+        <div class="counter"><div class="count tabular" id="count">0<small data-i="loads">loads</small></div></div>
+        <button class="bigtap" onclick="tapLoad()" data-i="load_landed">Load landed</button>
+        <div class="hstats">
+          <div><b class="tabular" id="st-yd">0</b><span data-i="yards">yards</span></div>
+          <div><b class="tabular" id="st-hr">0.0</b><span data-i="hours">hours</span></div>
+          <div><b class="tabular" id="st-cy">—</b><span data-i="cycle">min / load</span></div>
+        </div>
+        <div class="loadlist" id="loadlist"><div class="empty" data-i="no_loads">No loads yet</div></div>
+      </div>
+      <div class="footerbar"><button class="btn quiet" onclick="endHaul()" data-i="end_haul">End this haul</button></div>
+    </section>
+
+    <div class="toast" id="toast"></div>
+  </div>
+
+  <!-- OFFICE -->
+  <div class="office" id="office">
+    <div class="top"><h1>Submissions</h1><span class="sub">Billing · office app</span></div>
+    <div class="cols">
+      <div class="inbox" id="inbox"></div>
+      <div class="cover" id="cover"><div class="emptycover">Pick a lot to see its packet assemble.</div></div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ---------------- data ----------------
+const LOTS = [
+  { id:'KB-RE-62-C', key:'RE 62 C', builder:'KB Homes', comm:'Reflection Edge', lot:'62', block:'C', addr:'4337 E Winslow Dr, Meridian', scope:'flatwork', step:'Pour', setup:{date:'24 Jul', by:'Esteban'} },
+  { id:'TOLL-MS-07-11', key:'MS 07 11', builder:'Toll Brothers', comm:'Milestone', lot:'07', block:'11', addr:'8718 W Larkfield St, Star', scope:'flatwork', step:'Setup' },
+  { id:'AV-AV-83-04', key:'AV 83 04', builder:'Avimor Homes', comm:'Avimor', lot:'83', block:'04', addr:'6902 S Alder Way, Eagle', scope:'backfill', step:'Backfill' },
+];
+const PLACES = [
+  { id:'TOLL-MS-07-11', kind:'lot', name:'MS 07 11', sub:'Toll · 8718 W Larkfield' },
+  { id:'AV-AV-83-04', kind:'lot', name:'AV 83 04', sub:'Avimor · 6902 S Alder Way' },
+  { id:'TOLL-MS-12-11', kind:'lot', name:'MS 12 11', sub:'Toll · 8742 W Larkfield' },
+  { id:'STOCK-MS', kind:'stock', name:'Milestone stockpile', sub:'community pile' },
+  { id:'STOCK-SILO', kind:'stock', name:'Silo dirt pile', sub:'yard' },
+  { id:'PIT-RUSCH', kind:'pit', name:'Ruschman pit', sub:'road base · pit run' },
+];
+const MATERIALS = { dirt:{en:'Dirt (native fill)',es:'Tierra (relleno)'}, unsuitable:{en:'Dirt (unsuitable)',es:'Tierra (no apta)'}, trash:{en:'Trash',es:'Basura'}, roadbase:{en:'Road base',es:'Base de camino'}, pitrun:{en:'Pit run',es:'Pit run'}, sand:{en:'ASTM sand',es:'Arena ASTM'} };
+const TRUCK = { id:'T-14', cls:'End dump', capacity:12 };
+
+// seed: Avimor 83 04 already has three drivers' hauls today (the office's sticky note total: TRK 5H · 10 · 120 + 3H SKID)
+const SEED_HAULS = [
+  { driver:'Hugo Mendez', truck:'Truck & pup', lot:'AV-AV-83-04', from:'AV-AV-83-04', to:'STOCK-MS', mat:'dirt', loads:4, yards:48, hours:2.0, skid:1 },
+  { driver:'Ramon Castillo', truck:'End dump', lot:'AV-AV-83-04', from:'AV-AV-83-04', to:'STOCK-MS', mat:'dirt', loads:4, yards:48, hours:2.0, skid:1 },
+  { driver:'Pedro Alvarez', truck:'End dump', lot:'AV-AV-83-04', from:'AV-AV-83-04', to:'STOCK-MS', mat:'dirt', loads:2, yards:24, hours:1.0, skid:1 },
+];
+
+const I18N = {
+  en:{ signin_sub:'Excavation · Foundations · Flatwork', ms:'Continue with Microsoft', signin_note:'Demo only: pick who you are. The real app already knows — your name, role and which crews you lead come from the office roster.',
+       p_luis:'Crew lead · Flatwork · AH Concrete', p_ramon:'Driver · End dump · AH Excavation', p_office:'Office · Billing', role_luis:'Flatwork lead', truck_end:'End dump · T-14',
+       today:'Today', not_on_list:'Not on my list — find a lot', flatwork:'Flatwork', send:'Send to the office', hauls:"Today's hauls", new_haul:'Start a haul', from:'From', to:'To', material:'Material', begin:'Begin',
+       loads:'loads', load_landed:'Load landed', yards:'yards', hours:'hours', cycle:'min / load', no_loads:'No loads yet', end_haul:'End this haul',
+       ms_toast:'In the real app this opens the Microsoft sign-in. Pick a person below instead.', search_toast:'Search by community, lot or address. For the day you get sent somewhere unplanned.',
+       setup:'Setup', pour:'Pour', backfill:'Backfill', done_step:'Setup done', pending:'Waiting to send', sent:'Sent', returned:'Returned', accepted:'Accepted',
+       t0:'Filled in for you', t0_tag:'from the schedule', t1:'The form', t1_tag:'what billing needs', t2:'For cost', t2_tag:'tap to open', t2_close:'close',
+       setup_by:'Set up', pour_by:'Pour', complete:'Complete', partial:'Partial', sqft:'Square feet', total:'Total', from_ticket:'from SunCore ticket', pump:'Pump', bill_to:'Bill pump to', extras:'Extras', add_extra:'+ add an extra', notes:'Notes', notes_ph:'Anything the office should know',
+       crew_today:'Crew on this lot today · hours', hrs:'hrs', placed:'Concrete placed (yd)', ordered:'ordered', rework:'Rework or callback?', delay:'Delay?', photo:'Add a photo',
+       sent_toast:'Sent. The office will see it in a moment.', lot_lot:'Lot-to-lot transfer', lot_lot_body:'Both ends are Hartley lots: billed as haul-off on one and haul-in on the other, no dump, no pit.',
+       haul_end_toast:'Haul saved to', yes:'Yes', no:'No', garage:'Garage', driveway:'Driveway', patio:'Patio', porch:'Porch', sidewalk:'Sidewalk', stoop:'Stoop', other:'Other' },
+  es:{ signin_sub:'Excavación · Cimientos · Losas', ms:'Continuar con Microsoft', signin_note:'Solo demo: elija quién es. La app real ya lo sabe — su nombre, su rol y sus cuadrillas vienen del registro de la oficina.',
+       p_luis:'Líder de cuadrilla · Losas · AH Concrete', p_ramon:'Chofer · Volteo · AH Excavation', p_office:'Oficina · Facturación', role_luis:'Líder de losas', truck_end:'Volteo · T-14',
+       today:'Hoy', not_on_list:'No está en mi lista — buscar lote', flatwork:'Losas', send:'Enviar a la oficina', hauls:'Acarreos de hoy', new_haul:'Iniciar acarreo', from:'Desde', to:'Hacia', material:'Material', begin:'Comenzar',
+       loads:'viajes', load_landed:'Viaje entregado', yards:'yardas', hours:'horas', cycle:'min / viaje', no_loads:'Sin viajes todavía', end_haul:'Terminar este acarreo',
+       ms_toast:'En la app real esto abre el inicio de sesión de Microsoft. Elija una persona abajo.', search_toast:'Buscar por comunidad, lote o dirección. Para el día que lo mandan a otro lado.',
+       setup:'Preparar', pour:'Colar', backfill:'Relleno', done_step:'Preparación lista', pending:'Esperando enviar', sent:'Enviado', returned:'Devuelto', accepted:'Aceptado',
+       t0:'Ya llenado por usted', t0_tag:'del programa', t1:'El formulario', t1_tag:'lo que necesita facturación', t2:'Para costo', t2_tag:'toque para abrir', t2_close:'cerrar',
+       setup_by:'Preparó', pour_by:'Coló', complete:'Completo', partial:'Parcial', sqft:'Pies cuadrados', total:'Total', from_ticket:'del ticket de SunCore', pump:'Bomba', bill_to:'Cobrar bomba a', extras:'Extras', add_extra:'+ agregar extra', notes:'Notas', notes_ph:'Algo que la oficina deba saber',
+       crew_today:'Cuadrilla en este lote hoy · horas', hrs:'hrs', placed:'Concreto colocado (yd)', ordered:'pedido', rework:'¿Retrabajo o garantía?', delay:'¿Retraso?', photo:'Agregar foto',
+       sent_toast:'Enviado. La oficina lo verá en un momento.', lot_lot:'Transferencia lote a lote', lot_lot_body:'Ambos extremos son lotes de Hartley: se cobra como salida en uno y entrada en el otro, sin tiradero, sin banco.',
+       haul_end_toast:'Acarreo guardado en', yes:'Sí', no:'No', garage:'Garaje', driveway:'Entrada', patio:'Patio', porch:'Porche', sidewalk:'Banqueta', stoop:'Escalón', other:'Otro' }
+};
+
+// ---------------- state ----------------
+let lang = 'en';
+let state = load() || { submissions: [], hauls: SEED_HAULS.map(h => ({...h, id: 'seed-'+Math.random().toString(36).slice(2,8), ts: Date.now()-3600e3})), current: null, formDraft: null };
+function load(){ try{ const s = localStorage.getItem('hartley-demo-v1'); return s ? JSON.parse(s) : null; }catch(e){ return null; } }
+function save(){ try{ localStorage.setItem('hartley-demo-v1', JSON.stringify(state)); }catch(e){} }
+function resetAll(){ try{ localStorage.removeItem('hartley-demo-v1'); }catch(e){} location.reload(); }
+function t(k){ return (I18N[lang][k] ?? I18N.en[k] ?? k); }
+function setLang(l){ lang = l; try{ localStorage.setItem('hartley-demo-lang', l); }catch(e){}
+  document.getElementById('langEN').setAttribute('aria-pressed', l==='en'); document.getElementById('langES').setAttribute('aria-pressed', l==='es');
+  document.querySelectorAll('[data-i]').forEach(el => { el.textContent = t(el.dataset.i); });
+  rerenderCurrent();
+}
+try{ lang = localStorage.getItem('hartley-demo-lang') || 'en'; }catch(e){}
+
+// ---------------- nav ----------------
+let currentScreen = 's-signin';
+function show(id){ document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id===id)); currentScreen = id; document.getElementById('phone').style.display = ''; document.getElementById('office').classList.remove('active'); }
+function showOffice(){ document.getElementById('office').classList.add('active'); document.getElementById('phone').style.display='none'; currentScreen='office'; renderInbox(); }
+function signIn(who){ if (who==='luis'){ renderToday(); show('s-today'); } else if (who==='ramon'){ renderHauls(); show('s-hauls'); } else { showOffice(); } }
+function rerenderCurrent(){ if (currentScreen==='s-today') renderToday(); if (currentScreen==='s-form') renderForm(); if (currentScreen==='s-hauls') renderHauls(); if (currentScreen==='s-newhaul') renderPickers(); if (currentScreen==='office') renderInbox(); }
+function toast(msg){ const el = document.getElementById('toast'); el.textContent = msg; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(()=>el.classList.remove('show'), 2600); }
+function todayStr(){ return new Date().toLocaleDateString(lang==='es'?'es-MX':'en-US', { weekday:'long', month:'short', day:'numeric' }); }
+
+// ---------------- crew lead: today ----------------
+function statusOf(lotId){ const s = state.submissions.filter(x=>x.lot===lotId).slice(-1)[0]; return s ? s.status : null; }
+function renderToday(){
+  document.getElementById('today-date').textContent = todayStr();
+  const list = document.getElementById('today-list'); list.innerHTML = '';
+  LOTS.filter(l => l.scope==='flatwork').forEach(l => {
+    const st = statusOf(l.id);
+    const b = document.createElement('button'); b.className = 'lot'; b.onclick = () => openForm(l.id);
+    b.innerHTML = `<div class="key">${l.builder} · ${l.key}</div><div class="addr">${l.addr}</div>
+      <div class="row"><span class="chip scope">${t('flatwork')} · ${t(l.step.toLowerCase())}</span>${st ? `<span class="chip ${st}">${t(st)}</span>` : (l.setup ? `<span class="chip stock">${t('done_step')} · ${l.setup.date}</span>` : '')}</div>`;
+    list.appendChild(b);
+  });
+}
+
+// ---------------- crew lead: form ----------------
+const SF_ITEMS = ['garage','driveway','patio','porch','sidewalk','stoop','other'];
+function openForm(lotId){
+  const lot = LOTS.find(l=>l.id===lotId);
+  state.formDraft = { lot: lotId, sf: {garage:433, driveway:512, patio:240, porch:90, sidewalk:36, stoop:12, other:9}, complete:'partial', pump:'no', extras:[{name:'2\u2032 dowels', qty:8, unit:'EA'}], notes:'', crew:[{n:'Luis Ortega',h:8},{n:'Pancho',h:8},{n:'Chuy',h:8}], placed:22, ticket:22, rework:'no', delay:'no' };
+  renderForm(); show('s-form');
+}
+function renderForm(){
+  const d = state.formDraft; if(!d) return; const lot = LOTS.find(l=>l.id===d.lot);
+  document.getElementById('form-who').innerHTML = `Luis Ortega<br>${todayStr()}`;
+  const total = Object.values(d.sf).reduce((a,b)=>a+(+b||0),0);
+  const yards = Math.round(total/60); // demo rule of thumb, shown as ticket
+  const body = document.getElementById('form-body');
+  body.innerHTML = `
+  <div class="tier t0"><div class="th"><span>${t('t0')}</span><span class="tag">${t('t0_tag')}</span></div>
+    <div class="kv"><div>${lot.builder}<b>${lot.comm}</b></div><div>Lot · Block<b>${lot.lot} · ${lot.block}</b></div><div style="grid-column:1/-1">${lot.addr}<b>${t('flatwork')} · ${t(lot.step.toLowerCase())} · Luis Ortega</b></div></div></div>
+
+  <div class="tier t1"><div class="th"><span>${t('t1')}</span><span class="tag">${t('t1_tag')}</span></div>
+    <div class="frow"><label>${t('setup_by')}<span class="hint">${lot.setup ? lot.setup.date+' · '+lot.setup.by : '—'}</span></label></div>
+    <div class="frow"><label>${t('pour_by')}<span class="hint">${todayStr()} · Luis Ortega</span></label>
+      <div class="seg"><button aria-pressed="${d.complete==='complete'}" onclick="setD('complete','complete')">${t('complete')}</button><button aria-pressed="${d.complete==='partial'}" onclick="setD('complete','partial')">${t('partial')}</button></div></div>
+    ${SF_ITEMS.map(k=>`<div class="frow"><label>${t(k)}<span class="hint">${t('sqft')}</span></label><input type="number" inputmode="numeric" value="${d.sf[k]}" oninput="setSF('${k}',this.value)"></div>`).join('')}
+    <div class="total"><span>${t('total')}</span><span class="tabular">${total.toLocaleString()} SF · ${yards} yd <span style="font-weight:400;color:var(--muted);font-size:12px">${t('from_ticket')}</span></span></div>
+    <div class="frow"><label>${t('pump')}</label><div class="seg"><button aria-pressed="${d.pump==='yes'}" onclick="setD('pump','yes')">${t('yes')}</button><button aria-pressed="${d.pump==='no'}" onclick="setD('pump','no')">${t('no')}</button></div></div>
+    ${d.pump==='yes' ? `<div class="frow"><label>${t('bill_to')}</label><select><option>KB Homes</option><option>Hartley</option></select></div>` : ''}
+    <div class="frow"><label>${t('extras')}<span class="hint">${d.extras.map(e=>e.name+' · '+e.qty+' '+e.unit).join(', ')}</span></label><button class="seg" style="padding:8px 12px;border-radius:10px;color:var(--navy);font-weight:500;background:var(--paper)" onclick="toast('${t('extras')}: shiner, stamp, colour, dowels, saw cut, keyway…')">${t('add_extra')}</button></div>
+    <div class="frow"><label>${t('notes')}</label><input type="text" placeholder="${t('notes_ph')}" value="${d.notes}" oninput="setD('notes',this.value)"></div>
+  </div>
+
+  <div class="tier t2 ${d.t2open?'open':''}"><div class="th"><span>${t('t2')}</span><button onclick="toggleT2()">${d.t2open ? t('t2_close') : t('t2_tag')} ${d.t2open?'▴':'▾'}</button></div>
+    <div class="drawer">
+      <div class="crewrow" style="font-size:12.5px;border-top:0;padding-top:4px"><span>${t('crew_today')}</span><span></span></div>
+      ${d.crew.map((c,i)=>`<div class="crewrow"><span>${c.n}</span><input type="number" inputmode="decimal" value="${c.h}" oninput="setCrew(${i},this.value)"></div>`).join('')}
+      <div class="frow"><label>${t('placed')}<span class="hint">${d.ticket} yd ${t('ordered')} · SunCore</span></label><input type="number" inputmode="decimal" value="${d.placed}" oninput="setD('placed',this.value)"></div>
+      <div class="frow"><label>${t('rework')}</label><div class="seg"><button aria-pressed="${d.rework==='yes'}" onclick="setD('rework','yes')">${t('yes')}</button><button aria-pressed="${d.rework==='no'}" onclick="setD('rework','no')">${t('no')}</button></div></div>
+      <div class="frow"><label>${t('delay')}</label><div class="seg"><button aria-pressed="${d.delay==='yes'}" onclick="setD('delay','yes')">${t('yes')}</button><button aria-pressed="${d.delay==='no'}" onclick="setD('delay','no')">${t('no')}</button></div></div>
+      <div class="frow"><label>${t('photo')}</label><button class="seg" style="padding:8px 12px;border-radius:10px;background:var(--paper);color:var(--navy);font-weight:500" onclick="toast('📷')">▢</button></div>
+    </div></div>`;
+}
+function setD(k,v){ state.formDraft[k]=v; renderForm(); }
+function setSF(k,v){ state.formDraft.sf[k]=+v||0; const total=Object.values(state.formDraft.sf).reduce((a,b)=>a+(+b||0),0); document.querySelector('.total .tabular').innerHTML = `${total.toLocaleString()} SF · ${Math.round(total/60)} yd <span style="font-weight:400;color:var(--muted);font-size:12px">${t('from_ticket')}</span>`; }
+function setCrew(i,v){ state.formDraft.crew[i].h=+v||0; }
+function toggleT2(){ state.formDraft.t2open=!state.formDraft.t2open; renderForm(); }
+function submitForm(){
+  const d = state.formDraft; const total = Object.values(d.sf).reduce((a,b)=>a+(+b||0),0);
+  state.submissions.push({ id:'sub-'+Date.now(), lot:d.lot, form:'flatwork', by:'Luis Ortega', ts:Date.now(), status:'sent', total, yards:Math.round(total/60), complete:d.complete, pump:d.pump, extras:d.extras, crew:d.crew, placed:d.placed, ticket:d.ticket, rework:d.rework, notes:d.notes });
+  save(); toast(t('sent_toast')); renderToday(); show('s-today');
+}
+
+// ---------------- driver ----------------
+let haulDraft = null, timer = null;
+function renderHauls(){
+  document.getElementById('hauls-date').textContent = todayStr();
+  const list = document.getElementById('hauls-list'); list.innerHTML='';
+  const mine = state.hauls.filter(h=>h.driver==='Ramon Castillo');
+  if(!mine.length){ list.innerHTML = `<div class="note">${t('no_loads')}</div>`; return; }
+  mine.slice().reverse().forEach(h=>{
+    const f = PLACES.find(p=>p.id===h.from), to = PLACES.find(p=>p.id===h.to);
+    const isTransfer = f?.kind==='lot' && to?.kind==='lot';
+    const el = document.createElement('div'); el.className='haulcard';
+    el.innerHTML = `<div class="ft">${f?.name||h.from} <span class="arrow">→</span> ${to?.name||h.to} ${isTransfer?`<span class="chip transfer">${t('lot_lot')}</span>`:''}</div>
+      <div class="meta"><span class="tabular">${h.loads} ${t('loads')}</span><span class="tabular">${h.yards} yd</span><span class="tabular">${h.hours.toFixed(1)} ${t('hours')}</span><span>${MATERIALS[h.mat]?.[lang]||h.mat}</span></div>`;
+    list.appendChild(el);
+  });
+}
+function startHaul(){ haulDraft = { from:null, to:null, mat:null }; renderPickers(); show('s-newhaul'); }
+function renderPickers(){
+  const mk = (containerId, key, filter) => {
+    const c = document.getElementById(containerId); c.innerHTML='';
+    PLACES.filter(filter).forEach(p=>{
+      const b=document.createElement('button'); b.className='opt'; b.setAttribute('aria-pressed', haulDraft[key]===p.id);
+      b.innerHTML = `<span><span class="k">${p.name}</span><br><span class="s">${p.sub}</span></span><span class="chip ${p.kind==='lot'?'scope':'stock'}">${p.kind}</span>`;
+      b.onclick=()=>{ haulDraft[key]=p.id; renderPickers(); };
+      c.appendChild(b);
+    });
+  };
+  mk('pick-from','from',p=>true);
+  mk('pick-to','to',p=>p.id!==haulDraft.from);
+  const mc = document.getElementById('pick-mat'); mc.innerHTML='';
+  Object.entries(MATERIALS).forEach(([k,v])=>{ const b=document.createElement('button'); b.className='opt'; b.setAttribute('aria-pressed', haulDraft.mat===k); b.innerHTML=`<span class="k">${v[lang]}</span>`; b.onclick=()=>{haulDraft.mat=k; renderPickers();}; mc.appendChild(b); });
+  const f = PLACES.find(p=>p.id===haulDraft.from), to = PLACES.find(p=>p.id===haulDraft.to);
+  const tn = document.getElementById('transfer-note');
+  tn.innerHTML = (f?.kind==='lot' && to?.kind==='lot') ? `<div class="transfer"><span>⇄</span><span><b>${t('lot_lot')}</b>${t('lot_lot_body')}</span></div>` : '';
+  document.getElementById('haul-go').disabled = !(haulDraft.from && haulDraft.to && haulDraft.mat);
+}
+function beginCounting(){
+  const f = PLACES.find(p=>p.id===haulDraft.from), to = PLACES.find(p=>p.id===haulDraft.to);
+  haulDraft.loadsAt = []; haulDraft.start = Date.now();
+  document.getElementById('counter-title').textContent = `${f.name} → ${to.name}`;
+  document.getElementById('counter-sub').textContent = `${MATERIALS[haulDraft.mat][lang]} · ${TRUCK.cls} ${TRUCK.id} · ${TRUCK.capacity} yd`;
+  renderCounter(); show('s-counter');
+  clearInterval(timer); timer = setInterval(renderCounter, 1000);
+}
+function tapLoad(){ haulDraft.loadsAt.push(Date.now()); renderCounter(); }
+function renderCounter(){
+  if(!haulDraft) return;
+  const n = haulDraft.loadsAt.length;
+  document.getElementById('count').innerHTML = `${n}<small>${t('loads')}</small>`;
+  document.getElementById('st-yd').textContent = n*TRUCK.capacity;
+  const hrs = (Date.now()-haulDraft.start)/3600e3; document.getElementById('st-hr').textContent = hrs.toFixed(1);
+  document.getElementById('st-cy').textContent = n>1 ? Math.round(((haulDraft.loadsAt[n-1]-haulDraft.loadsAt[0])/(n-1))/60e3) : '—';
+  const ll = document.getElementById('loadlist');
+  ll.innerHTML = n ? haulDraft.loadsAt.map((ts,i)=>`<div><span>${t('loads').replace(/s$/,'')} ${i+1}</span><span class="tabular">${new Date(ts).toLocaleTimeString(lang==='es'?'es-MX':'en-US',{hour:'numeric',minute:'2-digit'})}</span></div>`).reverse().join('') : `<div class="empty">${t('no_loads')}</div>`;
+}
+function endHaul(){
+  clearInterval(timer);
+  const n = haulDraft.loadsAt.length; const f = PLACES.find(p=>p.id===haulDraft.from), to = PLACES.find(p=>p.id===haulDraft.to);
+  const lotId = f.kind==='lot' ? f.id : (to.kind==='lot' ? to.id : null);
+  state.hauls.push({ id:'h-'+Date.now(), driver:'Ramon Castillo', truck:TRUCK.cls, lot:lotId, from:haulDraft.from, to:haulDraft.to, mat:haulDraft.mat, loads:n, yards:n*TRUCK.capacity, hours:Math.max(0.1,(Date.now()-haulDraft.start)/3600e3), skid:0, ts:Date.now(), loadsAt:haulDraft.loadsAt });
+  save(); toast(`${t('haul_end_toast')} ${(PLACES.find(p=>p.id===lotId)||{}).name || '—'}`); renderHauls(); show('s-hauls'); haulDraft=null;
+}
+
+// ---------------- office ----------------
+let selectedLot = null;
+function renderInbox(){
+  const ib = document.getElementById('inbox'); ib.innerHTML='';
+  const lotIds = new Set([...state.submissions.map(s=>s.lot), ...state.hauls.map(h=>h.lot).filter(Boolean)]);
+  const items = [...lotIds].map(id=>{ const lot=LOTS.find(l=>l.id===id)||PLACES.find(p=>p.id===id)&&{key:PLACES.find(p=>p.id===id).name,builder:'',addr:''}; const subs=state.submissions.filter(s=>s.lot===id); const hauls=state.hauls.filter(h=>h.lot===id); const last=Math.max(...subs.map(s=>s.ts),...hauls.map(h=>h.ts),0); return {id,lot,subs,hauls,last}; }).sort((a,b)=>b.last-a.last);
+  const grp=document.createElement('div'); grp.className='grp'; grp.textContent=`${items.length} lots with new paper today`; ib.appendChild(grp);
+  items.forEach(it=>{
+    const b=document.createElement('button'); b.setAttribute('aria-pressed', selectedLot===it.id); b.onclick=()=>{selectedLot=it.id; renderInbox(); renderCover();};
+    const status = it.subs.some(s=>s.status==='sent') ? 'sent' : (it.hauls.length ? 'sent' : 'pending');
+    b.innerHTML = `<div class="k">${it.lot?.builder ? it.lot.builder+' · ' : ''}${it.lot?.key||it.id}</div><div class="m"><span>${it.subs.length} form${it.subs.length===1?'':'s'} · ${it.hauls.length} haul${it.hauls.length===1?'':'s'}</span><span class="chip ${status}" style="padding:1px 8px">${t(status)}</span></div>`;
+    ib.appendChild(b);
+  });
+  if(selectedLot) renderCover();
+}
+function renderCover(){
+  const cv = document.getElementById('cover'); const lot = LOTS.find(l=>l.id===selectedLot); if(!lot){ cv.innerHTML='<div class="emptycover">Pick a lot to see its packet assemble.</div>'; return; }
+  const subs = state.submissions.filter(s=>s.lot===selectedLot); const hauls = state.hauls.filter(h=>h.lot===selectedLot);
+  const hOff = hauls.filter(h=>h.from===selectedLot), hIn = hauls.filter(h=>h.to===selectedLot);
+  const sum = (arr,k)=>arr.reduce((a,h)=>a+(+h[k]||0),0);
+  const truckHrs = sum(hauls,'hours'), loads = sum(hauls,'loads'), yards = sum(hauls,'yards'), skid = sum(hauls,'skid');
+  const fw = subs.filter(s=>s.form==='flatwork').slice(-1)[0];
+  const transfers = hauls.filter(h=>PLACES.find(p=>p.id===h.from)?.kind==='lot' && PLACES.find(p=>p.id===h.to)?.kind==='lot');
+  const line = (name, v, src, code, dim=false) => `<div class="ln ${dim?'dim':''}"><span>${name}<br><span class="src">${src}</span></span><span class="code">${code}</span><span class="v tabular">${v}</span></div>`;
+  cv.innerHTML = `
+    <h2>${lot.builder} · ${lot.comm} · ${lot.lot}/${lot.block}</h2>
+    <div class="hd"><span>Address <b>${lot.addr}</b></span><span>Invoice # <b>—</b></span><span>Date sent to office <b>${new Date().toLocaleDateString()}</b></span><span>Sheets in packet <b>${subs.length + hauls.length}</b></span></div>
+    <div class="lines">
+      ${lot.scope==='flatwork' ? (fw
+        ? line('Flatwork', `${fw.total.toLocaleString()} SF`, `${fw.by} · ${fw.complete} · pump ${fw.pump}`, '3100') + line('Concrete', `${fw.yards} yd`, 'SunCore ticket', '3700') + (fw.extras.map(e=>line(e.name, `${e.qty} ${e.unit}`, 'extra', '3900')).join(''))
+        : line('Flatwork', '—', 'no form yet', '3100', true))
+      : line('Dig for foundation', '—', 'no dig form in this demo', '1020', true)}
+      ${hauls.length ? line('Hauling', `${truckHrs.toFixed(1)} hr · ${loads} loads · ${yards} yd`, `${hauls.length} hauling logs, summed`, '1090') : ''}
+      ${skid ? line('Skid steer', `${skid} hr`, 'from hauling logs', '1020') : ''}
+      ${hOff.length ? line('Haul-off excess dirt', `${sum(hOff,'yards')} yd`, hOff.map(h=>'→ '+(PLACES.find(p=>p.id===h.to)||{}).name).filter((v,i,a)=>a.indexOf(v)===i).join(', '), '1090') : ''}
+      ${hIn.length ? line('Haul-in for backfill', `${sum(hIn,'yards')} yd`, hIn.map(h=>MATERIALS[h.mat]?.en).filter((v,i,a)=>a.indexOf(v)===i).join(', '), '1050') : ''}
+    </div>
+    ${hauls.length ? `<div class="sticky"><b>The sticky note, done for the office:</b> TRK ${truckHrs.toFixed(0)}H · ${loads} · ${yards} + ${skid}H SKID</div>` : ''}
+    ${transfers.length ? `<div class="transfer"><span>⇄</span><span><b>${transfers.length} lot-to-lot transfer${transfers.length===1?'':'s'} · ${sum(transfers,'yards')} yd</b>Billed as haul-off here and haul-in on the other lot. No dump fee, no pit purchase. the overseer's 20% becomes a number.</span></div>` : ''}
+    ${fw && fw.crew ? `<div class="lines"><div class="ln dim"><span>Labour on this lot<br><span class="src">from the form · goes to payroll, not to the invoice</span></span><span class="code">L</span><span class="v tabular">${fw.crew.reduce((a,c)=>a+(+c.h||0),0)} hrs · ${fw.crew.length} people</span></div>${fw.placed && fw.ticket ? `<div class="ln dim"><span>Concrete placed vs ordered<br><span class="src">form vs SunCore ticket</span></span><span class="code">M</span><span class="v tabular">${fw.placed} / ${fw.ticket} yd</span></div>`:''}</div>` : ''}
+    <div class="actions"><button class="btn primary" onclick="accept()">Accept packet</button><button class="btn line" onclick="document.getElementById('ret').classList.toggle('show')">Return to lead</button></div>
+    <div class="retnote" id="ret"><input type="text" placeholder="What needs fixing — the lead sees this on their phone"><button class="btn quiet" style="width:auto;padding:10px 14px" onclick="doReturn()">Send back</button></div>`;
+}
+function accept(){ state.submissions.filter(s=>s.lot===selectedLot).forEach(s=>s.status='accepted'); save(); renderInbox(); }
+function doReturn(){ state.submissions.filter(s=>s.lot===selectedLot).forEach(s=>s.status='returned'); save(); renderInbox(); }
+
+// ---------------- boot ----------------
+setInterval(()=>{ document.getElementById('clock').textContent = new Date().toLocaleTimeString([], {hour:'numeric',minute:'2-digit'}); }, 1000);
+setLang(lang);
+</script>
+</body>
+</html>
